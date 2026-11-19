@@ -12,6 +12,7 @@ import app.garminuebersicht.data.Settings
 import app.garminuebersicht.data.Status
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -55,14 +56,20 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             try {
                 val api = api()
                 val days = _state.value.days
-                val status = async { api.status() }
-                val coach = async { api.coach() }
-                val overview = async { api.overview(days) }
-                val acts = async { api.activities(days) }
-                val nights = async { api.sleep(days) }
-                _state.update {
-                    it.copy(loading = false, status = status.await(), coach = coach.await(), overview = overview.await(),
+                // coroutineScope: Scheitert ein Abruf, kommt der Fehler hier im catch an,
+                // statt die übergeordnete Coroutine (und damit die App) abstürzen zu lassen.
+                coroutineScope {
+                    val status = async { api.status() }
+                    val coach = async { api.coach() }
+                    val overview = async { api.overview(days) }
+                    val acts = async { api.activities(days) }
+                    val nights = async { api.sleep(days) }
+                    val loaded = UiState(status = status.await(), coach = coach.await(), overview = overview.await(),
                         activities = acts.await(), nights = nights.await())
+                    _state.update {
+                        it.copy(loading = false, status = loaded.status, coach = loaded.coach, overview = loaded.overview,
+                            activities = loaded.activities, nights = loaded.nights)
+                    }
                 }
             } catch (e: kotlinx.coroutines.CancellationException) {
                 throw e
