@@ -1,0 +1,32 @@
+# Konfiguration des Garmin-Übersicht-Servers
+# Standardpfad nach der Installation: /etc/garmin-uebersicht/config.toml
+
+[server]
+# 127.0.0.1 + "tailscale serve" (empfohlen, HTTPS mit gültigem Zertifikat)
+# oder die Tailscale-IP des Servers (100.x.y.z), dann http://100.x.y.z:8765 in der App.
+# Nie 0.0.0.0 auf einem Server mit öffentlicher IP.
+host = "127.0.0.1"
+port = 8765
+# Zusätzlicher Schutz neben Tailscale: die App schickt dieses Token mit.
+# Das Installationsskript erzeugt es und legt es in token_file ab.
+token_file = "/etc/garmin-uebersicht/app-token"
+
+[garmin]
+# Datei, die nur den Personal-API-Schlüssel enthält (chmod 600).
+api_key_file = "/etc/garmin-uebersicht/api-key"
+
+[sync]
+# Uhrzeiten (Serverzeit) für den Abruf bei Garmin.
+times = ["06:30", "09:30", "13:00", "18:00", "22:30"]
+# Beim allerersten Start so viele Tage rückwirkend laden.
+backfill_days = 365
+# Bei jedem späteren Abruf die letzten N Tage erneut holen (Nachträge, Schlaf-Updates).
+refresh_days = 3
+
+[coach]
+# Maximal- und Ruhepuls für die Pulszonen. 0 = aus den Daten schätzen.
+max_hr = 0
+resting_hr = 0
+
+[storage]
+data_dir = "/var/lib/garmin-uebersicht"

@@ -1,0 +1,30 @@
+[Unit]
+Description=Garmin-Übersicht (Abruf über Garmin Personal API + HTTP-API für die App)
+Wants=network-online.target tailscaled.service
+After=network-online.target tailscaled.service
+
+[Service]
+Type=simple
+User=garmin-uebersicht
+Group=garmin-uebersicht
+WorkingDirectory=/opt/garmin-uebersicht
+ExecStart=/opt/garmin-uebersicht/.venv/bin/python -m uebersicht server --config /etc/garmin-uebersicht/config.toml
+Restart=on-failure
+RestartSec=30
+# Bindet der Server an die Tailscale-IP und ist tailscaled noch nicht so weit,
+# schlägt der Start fehl und systemd versucht es nach 30 s erneut.
+
+# Härtung
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+ReadWritePaths=/var/lib/garmin-uebersicht
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+
+[Install]
+WantedBy=multi-user.target

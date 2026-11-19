@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Der Server ist nur über Tailscale erreichbar. Empfohlen ist HTTPS über "tailscale serve"
+  (https://<server>.<tailnet>.ts.net). Alternativ kann die App den Server direkt über seine
+  Tailscale-IP per HTTP ansprechen (http://100.x.y.z:8765). Der Tailscale-Tunnel verschlüsselt
+  den Verkehr dann bereits mit WireGuard; deshalb ist unverschlüsseltes HTTP hier erlaubt.
+  Android kann das leider nicht auf den Tailscale-Adressbereich 100.64.0.0/10 beschränken.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>

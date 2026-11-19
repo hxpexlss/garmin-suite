@@ -11,7 +11,6 @@ def _ms(dt: datetime) -> int:
 
 
 def demo_raw(days: int = 120, seed: int = 7) -> dict[str, list]:
-    rng = random.Random(seed)
     end = date.today()
     activities, sleep, hrv = [], [], []
     plan = {0: "strength_training", 1: "running", 3: "running", 4: "yoga", 5: "road_biking", 6: "running"}
@@ -19,6 +18,8 @@ def demo_raw(days: int = 120, seed: int = 7) -> dict[str, list]:
     for i in range(days):
         day = end - timedelta(days=days - 1 - i)
         wd = day.weekday()
+        rng = random.Random(seed * 1_000_003 + day.toordinal())  # je Tag stabil, egal wie viele Tage abgefragt werden
+        trend = 1 - (end - day).days / 365
 
         # Schlaf der Nacht, die an diesem Tag endet
         total = rng.gauss(7.2 if wd < 5 else 7.9, 0.6) * 3600
@@ -28,7 +29,7 @@ def demo_raw(days: int = 120, seed: int = 7) -> dict[str, list]:
         bed = datetime.combine(day - timedelta(days=1), datetime.min.time()) + timedelta(
             hours=22, minutes=rng.randint(30, 110)
         )
-        night_hrv = rng.gauss(52, 6) + (i / days) * 4
+        night_hrv = rng.gauss(52, 6) + trend * 4
         sleep.append(
             {
                 "dailySleepDTO": {
@@ -47,7 +48,7 @@ def demo_raw(days: int = 120, seed: int = 7) -> dict[str, list]:
                 "avgOvernightHrv": round(night_hrv),
             }
         )
-        hrv.append({"calendarDate": day.isoformat(), "lastNightAvg": round(night_hrv), "weeklyAvg": round(52 + (i / days) * 4), "status": "BALANCED"})
+        hrv.append({"calendarDate": day.isoformat(), "lastNightAvg": round(night_hrv), "weeklyAvg": round(52 + trend * 4), "status": "BALANCED"})
 
         kind = plan.get(wd)
         if kind is None or rng.random() < 0.15:
@@ -67,7 +68,7 @@ def demo_raw(days: int = 120, seed: int = 7) -> dict[str, list]:
             name = "Yoga" if kind == "yoga" else "Krafttraining"
         activities.append(
             {
-                "activityId": 10_000_000 + i,
+                "activityId": int(day.strftime("%Y%m%d")),
                 "activityName": name,
                 "startTimeLocal": start.strftime("%Y-%m-%d %H:%M:%S"),
                 "activityType": {"typeKey": kind},

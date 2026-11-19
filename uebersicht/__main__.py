@@ -61,9 +61,25 @@ def main(argv: list[str] | None = None) -> int:
     a.add_argument("--roh", type=Path, default=DEFAULT_RAW, help="Ordner für Rohdaten")
     b = sub.add_parser("bauen", help="Übersicht aus gespeicherten Rohdaten erzeugen")
     b.add_argument("--roh", type=Path, default=DEFAULT_RAW)
+    s = sub.add_parser("server", help="Headless-Server mit regelmäßigem Abruf und HTTP-API")
+    s.add_argument("--config", help="Pfad zur config.toml")
+    s.add_argument("--demo", action="store_true", help="Beispieldaten statt Garmin verwenden")
+    s.add_argument("--host", help="Adresse überschreiben (z. B. 0.0.0.0 zum Testen)")
+    s.add_argument("--port", type=int)
     args = p.parse_args(argv)
 
-    logging.basicConfig(level=logging.INFO, format="%(message)s")
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s"
+                        if args.cmd == "server" else "%(message)s")
+
+    if args.cmd == "server":
+        from .server import Config, serve
+
+        cfg = Config.load(args.config)
+        cfg.demo = cfg.demo or args.demo
+        cfg.host = args.host or cfg.host
+        cfg.port = args.port or cfg.port
+        serve(cfg)
+        return 0
 
     if args.cmd == "demo":
         from .demo import demo_raw
