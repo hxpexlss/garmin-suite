@@ -1,0 +1,9 @@
+.venv/
+__pycache__/
+*.pyc
+
+# Persönliche Daten und Zugangsdaten nie einchecken
+daten/
+ausgabe/
+*api-key*
+*bearer-token*

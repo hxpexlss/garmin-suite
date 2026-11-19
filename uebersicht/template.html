@@ -1,0 +1,534 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Garmin-Übersicht</title>
+<style>
+:root {
+  color-scheme: light;
+  --page: #f9f9f7; --surface: #fcfcfb; --ink: #0b0b0b; --ink-2: #52514e; --muted: #898781;
+  --grid: #e1e0d9; --axis: #c3c2b7; --ring: rgba(11,11,11,0.10); --hover: rgba(11,11,11,0.04);
+  --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --s4: #eda100;
+  --s1-wash: rgba(42,120,214,0.10);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --page: #0d0d0d; --surface: #1a1a19; --ink: #f0efec; --ink-2: #c3c2b7; --muted: #898781;
+    --grid: #2c2c2a; --axis: #383835; --ring: rgba(255,255,255,0.10); --hover: rgba(255,255,255,0.05);
+    --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500;
+    --s1-wash: rgba(57,135,229,0.12);
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --page: #0d0d0d; --surface: #1a1a19; --ink: #f0efec; --ink-2: #c3c2b7; --muted: #898781;
+  --grid: #2c2c2a; --axis: #383835; --ring: rgba(255,255,255,0.10); --hover: rgba(255,255,255,0.05);
+  --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500;
+  --s1-wash: rgba(57,135,229,0.12);
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--page); color: var(--ink);
+  font: 15px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
+main { max-width: 1120px; margin: 0 auto; padding: 24px 16px 64px; }
+header { display: flex; flex-wrap: wrap; gap: 12px 24px; align-items: end; justify-content: space-between; margin-bottom: 24px; }
+h1 { font-size: 26px; margin: 0; letter-spacing: -0.01em; }
+h2 { font-size: 19px; margin: 40px 0 12px; }
+h3 { font-size: 15px; margin: 0 0 2px; font-weight: 600; }
+.sub { color: var(--ink-2); font-size: 13px; margin: 0; }
+.controls { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.seg { display: inline-flex; border: 1px solid var(--ring); border-radius: 8px; background: var(--surface); padding: 2px; }
+.seg button { border: 0; background: none; color: var(--ink-2); font: inherit; font-size: 13px; padding: 5px 10px; border-radius: 6px; cursor: pointer; }
+.seg button:hover { background: var(--hover); }
+.seg button[aria-pressed="true"] { background: var(--ink); color: var(--surface); }
+.banner { border: 1px solid var(--ring); background: var(--surface); border-radius: 10px; padding: 10px 14px; font-size: 13px; color: var(--ink-2); margin-bottom: 8px; }
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; }
+.tile, .card { background: var(--surface); border: 1px solid var(--ring); border-radius: 12px; padding: 14px 16px; }
+.tile .label { color: var(--ink-2); font-size: 13px; }
+.tile .value { font-size: 26px; font-weight: 600; font-variant-numeric: tabular-nums; margin-top: 2px; }
+.tile .unit { font-size: 14px; font-weight: 500; color: var(--ink-2); margin-left: 3px; }
+.tile .note { color: var(--muted); font-size: 12px; margin-top: 2px; }
+.grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 460px), 1fr)); gap: 12px; margin-top: 12px; }
+.card { min-width: 0; }
+.card-head { display: flex; justify-content: space-between; gap: 8px; align-items: start; flex-wrap: wrap; margin-bottom: 6px; }
+.legend { display: flex; gap: 12px; flex-wrap: wrap; font-size: 12px; color: var(--ink-2); }
+.legend span { display: inline-flex; align-items: center; gap: 5px; }
+.legend i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+.legend i.line { height: 2px; width: 14px; border-radius: 1px; }
+.chart { position: relative; }
+.chart svg { display: block; width: 100%; overflow: visible; }
+.chart text { fill: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+.empty { color: var(--muted); font-size: 13px; padding: 24px 0; text-align: center; }
+.tip { position: absolute; pointer-events: none; background: var(--surface); color: var(--ink);
+  border: 1px solid var(--ring); border-radius: 8px; padding: 8px 10px; font-size: 12px; line-height: 1.5;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.12); white-space: nowrap; z-index: 5; display: none; }
+.tip b { font-weight: 600; }
+.tip .row { display: flex; align-items: center; gap: 6px; justify-content: space-between; }
+.tip .row span:first-child { display: inline-flex; align-items: center; gap: 6px; color: var(--ink-2); }
+.tip i { width: 8px; height: 8px; border-radius: 2px; display: inline-block; }
+details { margin-top: 8px; }
+summary { cursor: pointer; color: var(--ink-2); font-size: 13px; }
+.table-wrap { overflow-x: auto; margin-top: 8px; }
+table { border-collapse: collapse; width: 100%; font-size: 13px; font-variant-numeric: tabular-nums; }
+th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--grid); white-space: nowrap; }
+th { color: var(--ink-2); font-weight: 500; font-size: 12px; }
+td.num, th.num { text-align: right; }
+.card > .table-wrap { margin-top: 0; }
+footer { margin-top: 40px; color: var(--muted); font-size: 12px; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <div>
+      <h1>Garmin-Übersicht</h1>
+      <p class="sub" id="meta"></p>
+    </div>
+    <div class="controls">
+      <div class="seg" role="group" aria-label="Zeitraum" id="range">
+        <button data-days="7">7 Tage</button>
+        <button data-days="30">30 Tage</button>
+        <button data-days="90">90 Tage</button>
+        <button data-days="365">1 Jahr</button>
+        <button data-days="0">Alles</button>
+      </div>
+      <div class="seg" role="group" aria-label="Darstellung" id="theme">
+        <button data-theme="auto">Auto</button>
+        <button data-theme="light">Hell</button>
+        <button data-theme="dark">Dunkel</button>
+      </div>
+    </div>
+  </header>
+  <div id="banner"></div>
+
+  <h2>Trainings</h2>
+  <div class="tiles" id="train-tiles"></div>
+  <div class="grid2">
+    <section class="card">
+      <div class="card-head"><div><h3>Trainingszeit pro Woche</h3><p class="sub">Stunden, Wochen ab Montag</p></div></div>
+      <div class="chart" id="c-weekly"></div>
+    </section>
+    <section class="card">
+      <div class="card-head"><div><h3>Nach Sportart</h3><p class="sub">Stunden im Zeitraum</p></div></div>
+      <div class="chart" id="c-sports"></div>
+    </section>
+  </div>
+  <section class="card" style="margin-top:12px">
+    <div class="card-head"><div><h3>Letzte Trainings</h3><p class="sub" id="act-count"></p></div></div>
+    <div class="table-wrap"><table id="t-acts"></table></div>
+  </section>
+
+  <h2>Schlaf</h2>
+  <div class="tiles" id="sleep-tiles"></div>
+  <div class="grid2">
+    <section class="card" style="grid-column: 1 / -1">
+      <div class="card-head">
+        <div><h3>Schlafdauer und Phasen</h3><p class="sub">Stunden pro Nacht</p></div>
+        <div class="legend" id="l-stages"></div>
+      </div>
+      <div class="chart" id="c-stages"></div>
+    </section>
+    <section class="card">
+      <div class="card-head"><div><h3>Sleep Score</h3><p class="sub">0–100 pro Nacht</p></div></div>
+      <div class="chart" id="c-score"></div>
+    </section>
+    <section class="card">
+      <div class="card-head">
+        <div><h3>HRV über Nacht</h3><p class="sub">Millisekunden</p></div>
+        <div class="legend" id="l-hrv"></div>
+      </div>
+      <div class="chart" id="c-hrv"></div>
+    </section>
+  </div>
+  <details>
+    <summary>Schlafdaten als Tabelle</summary>
+    <div class="table-wrap"><table id="t-sleep"></table></div>
+  </details>
+
+  <footer id="foot"></footer>
+</main>
+
+<script>
+const DATA = /*__DATA__*/null;
+
+// ---------- Hilfsfunktionen ----------
+const $ = (s) => document.querySelector(s);
+const NS = "http://www.w3.org/2000/svg";
+const nf = (d) => new Intl.NumberFormat("de-DE", { maximumFractionDigits: d, minimumFractionDigits: d });
+const fmt0 = nf(0), fmt1 = nf(1);
+const DASH = "–";
+const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+function hm(sec) {
+  if (sec == null) return DASH;
+  const m = Math.round(sec / 60);
+  return `${Math.floor(m / 60)}:${String(m % 60).padStart(2, "0")} h`;
+}
+function km(m) { return m == null ? DASH : `${fmt1.format(m / 1000)} km`; }
+function pace(a) {
+  if (!a.avgSpeedMs || !a.distanceM) return DASH;
+  if (/run|walk|hik/.test(a.type)) {
+    const s = 1000 / a.avgSpeedMs;
+    return `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2, "0")} /km`;
+  }
+  if (/swim/.test(a.type)) {
+    const s = 100 / a.avgSpeedMs;
+    return `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2, "0")} /100 m`;
+  }
+  return `${fmt1.format(a.avgSpeedMs * 3.6)} km/h`;
+}
+const parseDate = (s) => new Date(s + "T00:00:00");
+const dLabel = (s, opts = { day: "2-digit", month: "2-digit" }) => parseDate(s).toLocaleDateString("de-DE", opts);
+const isoDay = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+function mondayOf(s) { const d = parseDate(s); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); return isoDay(d); }
+const avg = (xs) => { const v = xs.filter((x) => x != null); return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null; };
+const sum = (xs) => xs.reduce((a, b) => a + (b || 0), 0);
+
+function niceMax(v) {
+  if (!v || v <= 0) return 1;
+  const p = Math.pow(10, Math.floor(Math.log10(v)));
+  for (const m of [1, 2, 2.5, 5, 10]) if (m * p >= v) return m * p;
+  return 10 * p;
+}
+function niceStep(v) { // ganze, gut lesbare Schritte: 1, 2, 5, 10 …
+  if (!v || v <= 0) return 1;
+  const p = Math.pow(10, Math.floor(Math.log10(v)));
+  for (const m of [1, 2, 5, 10]) if (m * p >= v) return Math.max(1, m * p);
+  return 10 * p;
+}
+function el(tag, attrs = {}, parent) {
+  const e = document.createElementNS(NS, tag);
+  for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v);
+  if (parent) parent.appendChild(e);
+  return e;
+}
+// Säule mit 4px abgerundetem Datenende, eckig an der Basis
+function colPath(x, y, w, h, r = 4) {
+  if (h <= 0) return "";
+  r = Math.min(r, w / 2, h);
+  return `M${x},${y + h}V${y + r}Q${x},${y} ${x + r},${y}H${x + w - r}Q${x + w},${y} ${x + w},${y + r}V${y + h}Z`;
+}
+function barPath(x, y, w, h, r = 4) { // horizontal, rundes Ende rechts
+  if (w <= 0) return "";
+  r = Math.min(r, h / 2, w);
+  return `M${x},${y}H${x + w - r}Q${x + w},${y} ${x + w},${y + r}V${y + h - r}Q${x + w},${y + h} ${x + w - r},${y + h}H${x}Z`;
+}
+
+// ---------- Tooltip ----------
+function tooltip(host) {
+  const t = document.createElement("div"); t.className = "tip"; host.appendChild(t);
+  return {
+    show(html, x, y) {
+      t.innerHTML = html; t.style.display = "block";
+      const W = host.clientWidth, tw = t.offsetWidth;
+      let left = x + 12; if (left + tw > W) left = Math.max(0, x - tw - 12);
+      t.style.left = left + "px"; t.style.top = Math.max(0, y - t.offsetHeight - 8) + "px";
+    },
+    hide() { t.style.display = "none"; },
+  };
+}
+const tipRow = (color, label, value, line) =>
+  `<div class="row"><span>${color ? `<i style="background:${color};${line ? "height:2px;width:12px" : ""}"></i>` : ""}${esc(label)}</span><b>${esc(value)}</b></div>`;
+
+// ---------- Säulendiagramm (optional gestapelt) ----------
+function columnChart(host, { labels, series, yFmt, tipTitle, height = 220, xEvery }) {
+  host.innerHTML = "";
+  if (!labels.length) { host.innerHTML = '<div class="empty">Keine Daten im Zeitraum</div>'; return; }
+  const W = host.clientWidth || 600, H = height, m = { t: 8, r: 4, b: 22, l: 36 };
+  const iw = W - m.l - m.r, ih = H - m.t - m.b;
+  const totals = labels.map((_, i) => sum(series.map((s) => s.values[i])));
+  const step = niceStep(Math.max(...totals) / 4), ticks = Math.max(1, Math.ceil(Math.max(...totals) / step)), yMax = step * ticks;
+  const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, height: H, role: "img" }, host);
+  const y = (v) => m.t + ih - (v / yMax) * ih;
+  for (let k = 0; k <= ticks; k++) {
+    const v = step * k, yy = y(v);
+    el("line", { x1: m.l, x2: W - m.r, y1: yy, y2: yy, stroke: k ? css("--grid") : css("--axis"), "stroke-width": 1 }, svg);
+    el("text", { x: m.l - 6, y: yy + 3.5, "text-anchor": "end" }, svg).textContent = yFmt(v);
+  }
+  const band = iw / labels.length, bw = Math.max(1, Math.min(24, band - 2));
+  const every = xEvery || Math.ceil(labels.length / Math.max(1, Math.floor(iw / 56)));
+  const surface = css("--surface");
+  const tip = tooltip(host);
+  labels.forEach((lab, i) => {
+    const x = m.l + band * i + (band - bw) / 2;
+    let acc = 0;
+    const top = series.length - 1 - [...series].reverse().findIndex((s) => s.values[i] > 0);
+    series.forEach((s, si) => {
+      const v = s.values[i] || 0; if (!v) return;
+      const y0 = y(acc), y1 = y(acc + v); acc += v;
+      const gap = si > 0 && series.slice(0, si).some((p) => p.values[i] > 0) ? 2 : 0; // 2px Oberflächen-Lücke
+      const h = y0 - y1 - gap;
+      if (h <= 0) return;
+      el("path", { d: si === top ? colPath(x, y1, bw, h) : `M${x},${y1}h${bw}v${h}h${-bw}Z`, fill: s.color }, svg);
+    });
+    if (i % every === 0) {
+      el("text", { x: x + bw / 2, y: H - 6, "text-anchor": "middle" }, svg).textContent = lab.short;
+    }
+    const hit = el("rect", { x: m.l + band * i, y: m.t, width: band, height: ih, fill: "transparent" }, svg);
+    hit.addEventListener("mouseenter", () => hit.setAttribute("fill", css("--hover")));
+    hit.addEventListener("mousemove", (e) => {
+      const r = host.getBoundingClientRect();
+      tip.show(tipTitle(i) + series.map((s) => tipRow(series.length > 1 ? s.color : null, s.name, s.fmt(s.values[i]))).join(""),
+        e.clientX - r.left, e.clientY - r.top);
+    });
+    hit.addEventListener("mouseleave", () => { hit.setAttribute("fill", "transparent"); tip.hide(); });
+  });
+  void surface;
+}
+
+// ---------- Horizontale Balken ----------
+function barChart(host, { rows, fmt }) {
+  host.innerHTML = "";
+  if (!rows.length) { host.innerHTML = '<div class="empty">Keine Daten im Zeitraum</div>'; return; }
+  const W = host.clientWidth || 600, rowH = 30, labW = Math.min(150, W * 0.36), valW = 64;
+  const H = rows.length * rowH + 4;
+  const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, height: H, role: "img" }, host);
+  const max = Math.max(...rows.map((r) => r.value)) || 1, iw = W - labW - valW;
+  const tip = tooltip(host);
+  el("line", { x1: labW, x2: labW, y1: 0, y2: H, stroke: css("--axis"), "stroke-width": 1 }, svg);
+  rows.forEach((r, i) => {
+    const y = i * rowH + 3, bh = 18, w = (r.value / max) * iw;
+    const t = el("text", { x: labW - 8, y: y + bh / 2 + 4, "text-anchor": "end" }, svg);
+    t.textContent = r.label; t.style.fill = css("--ink-2"); t.style.fontSize = "12px";
+    el("path", { d: barPath(labW, y, Math.max(w, 1), bh), fill: css("--s1") }, svg);
+    const v = el("text", { x: labW + w + 6, y: y + bh / 2 + 4 }, svg); v.textContent = fmt(r.value);
+    v.style.fill = css("--ink-2");
+    const hit = el("rect", { x: 0, y: i * rowH, width: W, height: rowH, fill: "transparent" }, svg);
+    hit.addEventListener("mousemove", (e) => {
+      const b = host.getBoundingClientRect();
+      tip.show(`<b>${esc(r.label)}</b>` + r.tip.map(([k, val]) => tipRow(null, k, val)).join(""), e.clientX - b.left, e.clientY - b.top);
+    });
+    hit.addEventListener("mouseleave", () => tip.hide());
+  });
+}
+
+// ---------- Liniendiagramm mit Fadenkreuz ----------
+function lineChart(host, { dates, series, yFmt, height = 200, yMin, yMaxFixed }) {
+  host.innerHTML = "";
+  const all = series.flatMap((s) => s.values).filter((v) => v != null);
+  if (!all.length) { host.innerHTML = '<div class="empty">Keine Daten im Zeitraum</div>'; return; }
+  const W = host.clientWidth || 600, H = height, m = { t: 10, r: 10, b: 22, l: 36 };
+  const iw = W - m.l - m.r, ih = H - m.t - m.b;
+  let lo = yMin ?? Math.floor(Math.min(...all) * 0.9), hi = yMaxFixed ?? Math.max(...all);
+  const step = niceStep((hi - lo) / 4); lo = Math.floor(lo / step) * step; hi = lo + step * Math.max(1, Math.ceil((hi - lo) / step));
+  const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, height: H, role: "img" }, host);
+  const n = dates.length, x = (i) => m.l + (n === 1 ? iw / 2 : (i / (n - 1)) * iw), y = (v) => m.t + ih - ((v - lo) / (hi - lo)) * ih;
+  for (let v = lo; v <= hi + 1e-9; v += step) {
+    el("line", { x1: m.l, x2: W - m.r, y1: y(v), y2: y(v), stroke: v === lo ? css("--axis") : css("--grid"), "stroke-width": 1 }, svg);
+    el("text", { x: m.l - 6, y: y(v) + 3.5, "text-anchor": "end" }, svg).textContent = yFmt(v);
+  }
+  const every = Math.ceil(n / Math.max(1, Math.floor(iw / 56)));
+  dates.forEach((d, i) => { if (i % every === 0) el("text", { x: x(i), y: H - 6, "text-anchor": "middle" }, svg).textContent = dLabel(d); });
+  series.forEach((s) => {
+    let d = "", pen = false;
+    s.values.forEach((v, i) => { if (v == null) { pen = false; return; } d += `${pen ? "L" : "M"}${x(i)},${y(v)}`; pen = true; });
+    if (s.area) {
+      let a = "", start = null, last = null;
+      s.values.forEach((v, i) => {
+        if (v == null) { if (start != null) a += `L${x(last)},${y(lo)}L${x(start)},${y(lo)}Z`; start = null; return; }
+        if (start == null) { start = i; a += `M${x(i)},${y(v)}`; } else a += `L${x(i)},${y(v)}`; last = i;
+      });
+      if (start != null) a += `L${x(last)},${y(lo)}L${x(start)},${y(lo)}Z`;
+      el("path", { d: a, fill: s.area }, svg);
+    }
+    el("path", { d, fill: "none", stroke: s.color, "stroke-width": 2, "stroke-linejoin": "round", "stroke-linecap": "round" }, svg);
+    const li = s.values.map((v, i) => (v != null ? i : -1)).filter((i) => i >= 0).pop();
+    if (li != null) el("circle", { cx: x(li), cy: y(s.values[li]), r: 4, fill: s.color, stroke: css("--surface"), "stroke-width": 2 }, svg);
+  });
+  const cross = el("line", { y1: m.t, y2: m.t + ih, stroke: css("--axis"), "stroke-width": 1, visibility: "hidden" }, svg);
+  const dots = series.map((s) => el("circle", { r: 4, fill: s.color, stroke: css("--surface"), "stroke-width": 2, visibility: "hidden" }, svg));
+  const tip = tooltip(host);
+  const hit = el("rect", { x: m.l, y: 0, width: iw, height: H, fill: "transparent" }, svg);
+  hit.addEventListener("mousemove", (e) => {
+    const r = host.getBoundingClientRect(), sx = ((e.clientX - r.left) / r.width) * W;
+    const i = Math.max(0, Math.min(n - 1, Math.round(((sx - m.l) / iw) * (n - 1))));
+    cross.setAttribute("x1", x(i)); cross.setAttribute("x2", x(i)); cross.setAttribute("visibility", "visible");
+    series.forEach((s, k) => {
+      const v = s.values[i];
+      dots[k].setAttribute("visibility", v == null ? "hidden" : "visible");
+      if (v != null) { dots[k].setAttribute("cx", x(i)); dots[k].setAttribute("cy", y(v)); }
+    });
+    tip.show(`<b>${dLabel(dates[i], { weekday: "short", day: "2-digit", month: "2-digit", year: "numeric" })}</b>` +
+      series.map((s) => tipRow(series.length > 1 ? s.color : null, s.name, s.values[i] == null ? DASH : s.fmt(s.values[i]), true)).join(""),
+      e.clientX - r.left, e.clientY - r.top);
+  });
+  hit.addEventListener("mouseleave", () => { cross.setAttribute("visibility", "hidden"); dots.forEach((d) => d.setAttribute("visibility", "hidden")); tip.hide(); });
+}
+
+// ---------- Kacheln & Tabellen ----------
+function tiles(host, items) {
+  host.innerHTML = items.map((t) => `<div class="tile"><div class="label">${esc(t.label)}</div>
+    <div class="value">${esc(t.value)}${t.unit ? `<span class="unit">${esc(t.unit)}</span>` : ""}</div>
+    ${t.note ? `<div class="note">${esc(t.note)}</div>` : ""}</div>`).join("");
+}
+function table(host, cols, rows) {
+  host.innerHTML = `<thead><tr>${cols.map((c) => `<th class="${c.num ? "num" : ""}">${esc(c.h)}</th>`).join("")}</tr></thead>
+    <tbody>${rows.map((r) => `<tr>${cols.map((c) => `<td class="${c.num ? "num" : ""}">${esc(c.v(r))}</td>`).join("")}</tr>`).join("")}</tbody>`;
+}
+function legend(host, items) {
+  host.innerHTML = items.map((i) => `<span><i class="${i.line ? "line" : ""}" style="background:${i.color}"></i>${esc(i.name)}</span>`).join("");
+}
+
+// ---------- Aufbau ----------
+const state = { days: 30 };
+try { const d = localStorage.getItem("gu-days"); if (d != null) state.days = +d; } catch {}
+
+function range() {
+  const dates = [...DATA.activities.map((a) => a.date), ...DATA.sleep.map((s) => s.date)].filter(Boolean).sort();
+  const last = dates.length ? dates[dates.length - 1] : isoDay(new Date());
+  const end = parseDate(isoDay(new Date())) > parseDate(last) ? isoDay(new Date()) : last;
+  if (!state.days) return { start: dates[0] || end, end };
+  const s = parseDate(end); s.setDate(s.getDate() - state.days + 1);
+  return { start: isoDay(s), end };
+}
+function daysBetween(start, end) {
+  const out = [], d = parseDate(start), e = parseDate(end);
+  while (d <= e) { out.push(isoDay(d)); d.setDate(d.getDate() + 1); }
+  return out;
+}
+
+function renderTraining({ start, end }) {
+  const acts = DATA.activities.filter((a) => a.date >= start && a.date <= end);
+  const dur = sum(acts.map((a) => a.durationS)), dist = sum(acts.map((a) => a.distanceM));
+  const weeks = Math.max(1, daysBetween(start, end).length / 7);
+  tiles($("#train-tiles"), [
+    { label: "Trainings", value: fmt0.format(acts.length), note: `${fmt1.format(acts.length / weeks)} pro Woche` },
+    { label: "Trainingszeit", value: hm(dur).replace(" h", ""), unit: "h", note: `${hm(dur / weeks)} pro Woche` },
+    { label: "Distanz", value: fmt0.format(dist / 1000), unit: "km", note: `${fmt1.format(dist / 1000 / weeks)} km pro Woche` },
+    { label: "Ø Herzfrequenz", value: avg(acts.map((a) => a.avgHr)) == null ? DASH : fmt0.format(avg(acts.map((a) => a.avgHr))), unit: "bpm", note: "über alle Trainings" },
+  ]);
+
+  // Wochen
+  const wk = new Map();
+  for (let d = parseDate(mondayOf(start)); d <= parseDate(end); d.setDate(d.getDate() + 7)) wk.set(isoDay(d), { h: 0, n: 0, km: 0 });
+  acts.forEach((a) => { const w = wk.get(mondayOf(a.date)); if (w) { w.h += (a.durationS || 0) / 3600; w.n++; w.km += (a.distanceM || 0) / 1000; } });
+  const wkeys = [...wk.keys()];
+  columnChart($("#c-weekly"), {
+    labels: wkeys.map((k) => ({ short: dLabel(k) })),
+    series: [{ name: "Trainingszeit", color: css("--s1"), values: wkeys.map((k) => wk.get(k).h), fmt: (v) => hm(v * 3600) }],
+    yFmt: (v) => fmt0.format(v),
+    tipTitle: (i) => { const w = wk.get(wkeys[i]); return `<b>Woche ab ${dLabel(wkeys[i])}</b>${tipRow(null, "Trainings", w.n)}${tipRow(null, "Distanz", fmt1.format(w.km) + " km")}`; },
+  });
+
+  // Sportarten
+  const by = new Map();
+  acts.forEach((a) => { const s = by.get(a.typeLabel) || { h: 0, n: 0, km: 0 }; s.h += (a.durationS || 0) / 3600; s.n++; s.km += (a.distanceM || 0) / 1000; by.set(a.typeLabel, s); });
+  let rows = [...by.entries()].sort((a, b) => b[1].h - a[1].h);
+  if (rows.length > 7) { // Rest zu "Sonstige" zusammenfassen
+    const rest = rows.slice(6).reduce((o, [, s]) => ({ h: o.h + s.h, n: o.n + s.n, km: o.km + s.km }), { h: 0, n: 0, km: 0 });
+    rows = [...rows.slice(0, 6), ["Sonstige", rest]];
+  }
+  barChart($("#c-sports"), {
+    rows: rows.map(([label, s]) => ({ label, value: s.h, tip: [["Trainingszeit", hm(s.h * 3600)], ["Trainings", String(s.n)], ...(s.km ? [["Distanz", fmt1.format(s.km) + " km"]] : [])] })),
+    fmt: (v) => hm(v * 3600),
+  });
+
+  $("#act-count").textContent = acts.length > 50 ? `Die neuesten 50 von ${acts.length}` : `${acts.length} im Zeitraum`;
+  table($("#t-acts"), [
+    { h: "Datum", v: (a) => `${dLabel(a.date, { weekday: "short", day: "2-digit", month: "2-digit" })}${a.time ? " " + a.time : ""}` },
+    { h: "Training", v: (a) => a.name },
+    { h: "Sportart", v: (a) => a.typeLabel },
+    { h: "Dauer", num: true, v: (a) => hm(a.durationS) },
+    { h: "Distanz", num: true, v: (a) => km(a.distanceM) },
+    { h: "Tempo", num: true, v: pace },
+    { h: "Ø HF", num: true, v: (a) => (a.avgHr ? fmt0.format(a.avgHr) : DASH) },
+    { h: "kcal", num: true, v: (a) => (a.calories ? fmt0.format(a.calories) : DASH) },
+    { h: "Trainingseffekt", num: true, v: (a) => (a.trainingEffect ? fmt1.format(a.trainingEffect) : DASH) },
+  ], acts.slice(0, 50));
+}
+
+function renderSleep({ start, end }) {
+  const byDate = new Map(DATA.sleep.map((s) => [s.date, s]));
+  const dates = daysBetween(start, end);
+  const nights = dates.map((d) => byDate.get(d)).filter((s) => s && s.totalS);
+  const pick = (k) => dates.map((d) => byDate.get(d)?.[k] ?? null);
+
+  const aT = avg(nights.map((s) => s.totalS));
+  const best = nights.reduce((b, s) => (s.score != null && (!b || s.score > b.score) ? s : b), null);
+  tiles($("#sleep-tiles"), [
+    { label: "Ø Schlafdauer", value: aT == null ? DASH : hm(aT).replace(" h", ""), unit: aT == null ? "" : "h", note: `${nights.length} Nächte erfasst` },
+    { label: "Ø Sleep Score", value: avg(nights.map((s) => s.score)) == null ? DASH : fmt0.format(avg(nights.map((s) => s.score))), note: best ? `beste Nacht ${fmt0.format(best.score)} am ${dLabel(best.date)}` : "" },
+    { label: "Ø HRV", value: avg(pick("hrv")) == null ? DASH : fmt0.format(avg(pick("hrv"))), unit: "ms", note: "über Nacht" },
+    { label: "Ø Ruhepuls", value: avg(nights.map((s) => s.restingHr)) == null ? DASH : fmt0.format(avg(nights.map((s) => s.restingHr))), unit: "bpm" },
+  ]);
+
+  const stages = [
+    { key: "deepS", name: "Tief", color: css("--s1") },
+    { key: "lightS", name: "Leicht", color: css("--s2") },
+    { key: "remS", name: "REM", color: css("--s3") },
+    { key: "awakeS", name: "Wach", color: css("--s4") },
+  ];
+  const hasStages = nights.some((s) => s.deepS != null);
+  const series = hasStages
+    ? stages.map((st) => ({ name: st.name, color: st.color, values: pick(st.key).map((v) => (v || 0) / 3600), fmt: (v) => hm(v * 3600) }))
+    : [{ name: "Schlaf", color: css("--s1"), values: pick("totalS").map((v) => (v || 0) / 3600), fmt: (v) => hm(v * 3600) }];
+  legend($("#l-stages"), hasStages ? stages : []);
+  columnChart($("#c-stages"), {
+    labels: dates.map((d) => ({ short: dLabel(d) })),
+    series, height: 240, yFmt: (v) => fmt0.format(v),
+    tipTitle: (i) => {
+      const s = byDate.get(dates[i]);
+      return `<b>Nacht auf ${dLabel(dates[i], { weekday: "short", day: "2-digit", month: "2-digit" })}</b>` +
+        (s?.totalS ? tipRow(null, "Schlaf gesamt", hm(s.totalS)) + (s.start ? tipRow(null, "Zeit", `${s.start}–${s.end || "?"}`) : "") : tipRow(null, "Keine Daten", ""));
+    },
+  });
+
+  lineChart($("#c-score"), {
+    dates, yMin: 0, yMaxFixed: 100,
+    series: [{ name: "Sleep Score", color: css("--s1"), area: css("--s1-wash"), values: pick("score"), fmt: (v) => fmt0.format(v) }],
+    yFmt: (v) => fmt0.format(v),
+  });
+  const hasWeekly = pick("hrvWeekly").some((v) => v != null);
+  const hrvSeries = [{ name: "Nacht", color: css("--s1"), values: pick("hrv"), fmt: (v) => fmt0.format(v) + " ms" }];
+  if (hasWeekly) hrvSeries.push({ name: "7-Tage-Schnitt", color: css("--s2"), values: pick("hrvWeekly"), fmt: (v) => fmt0.format(v) + " ms" });
+  legend($("#l-hrv"), hasWeekly ? hrvSeries.map((s) => ({ ...s, line: true })) : []);
+  lineChart($("#c-hrv"), { dates, series: hrvSeries, yFmt: (v) => fmt0.format(v) });
+
+  table($("#t-sleep"), [
+    { h: "Nacht auf", v: (s) => dLabel(s.date, { weekday: "short", day: "2-digit", month: "2-digit", year: "numeric" }) },
+    { h: "Zeit", v: (s) => (s.start ? `${s.start}–${s.end || "?"}` : DASH) },
+    { h: "Gesamt", num: true, v: (s) => hm(s.totalS) },
+    { h: "Tief", num: true, v: (s) => hm(s.deepS) },
+    { h: "Leicht", num: true, v: (s) => hm(s.lightS) },
+    { h: "REM", num: true, v: (s) => hm(s.remS) },
+    { h: "Wach", num: true, v: (s) => hm(s.awakeS) },
+    { h: "Score", num: true, v: (s) => (s.score != null ? fmt0.format(s.score) : DASH) },
+    { h: "HRV", num: true, v: (s) => (s.hrv != null ? fmt0.format(s.hrv) + " ms" : DASH) },
+    { h: "Ruhepuls", num: true, v: (s) => (s.restingHr != null ? fmt0.format(s.restingHr) : DASH) },
+  ], dates.map((d) => byDate.get(d)).filter(Boolean).reverse());
+}
+
+function renderAll() {
+  const r = range();
+  document.querySelectorAll("#range button").forEach((b) => b.setAttribute("aria-pressed", String(+b.dataset.days === state.days)));
+  $("#meta").textContent = `${dLabel(r.start, { day: "2-digit", month: "2-digit", year: "numeric" })} bis ${dLabel(r.end, { day: "2-digit", month: "2-digit", year: "numeric" })}`;
+  renderTraining(r);
+  renderSleep(r);
+}
+
+function setTheme(t) {
+  if (t === "auto") document.documentElement.removeAttribute("data-theme"); else document.documentElement.setAttribute("data-theme", t);
+  document.querySelectorAll("#theme button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.theme === t)));
+  try { localStorage.setItem("gu-theme", t); } catch {}
+}
+
+if (!DATA) {
+  document.querySelector("main").innerHTML = "<h1>Garmin-Übersicht</h1><p>Keine Daten eingebettet. Erzeuge die Seite mit <code>python -m uebersicht demo</code> oder <code>abrufen</code>.</p>";
+} else {
+  if (DATA.source === "demo") $("#banner").innerHTML = '<div class="banner">Beispieldaten – erzeugt ohne Garmin-Konto. Mit <code>python -m uebersicht abrufen</code> holst du deine echten Daten.</div>';
+  $("#foot").textContent = `Erstellt am ${DATA.generated} · Quelle: ${DATA.source === "demo" ? "Beispieldaten" : "Garmin Connect Personal API"} · ${DATA.activities.length} Trainings, ${DATA.sleep.length} Nächte`;
+  let theme = "auto"; try { theme = localStorage.getItem("gu-theme") || "auto"; } catch {}
+  setTheme(theme);
+  document.querySelectorAll("#range button").forEach((b) => b.addEventListener("click", () => {
+    state.days = +b.dataset.days; try { localStorage.setItem("gu-days", state.days); } catch {} renderAll();
+  }));
+  document.querySelectorAll("#theme button").forEach((b) => b.addEventListener("click", () => { setTheme(b.dataset.theme); renderAll(); }));
+  matchMedia("(prefers-color-scheme: dark)").addEventListener("change", renderAll);
+  let rt; addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(renderAll, 120); });
+  renderAll();
+}
+</script>
+</body>
+</html>
